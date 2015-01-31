@@ -87,28 +87,33 @@ public class Address {
 		StringBuilder sb = new StringBuilder();
 		if (step >= 0) {
 			StringBuilder blank = new StringBuilder();
-			for(int i = 0; i < step; ++i) {
+			for (int i = 0; i < step; ++i) {
 				blank.append("    ");
 			}
-			Stream.of(blank, addr.value.toString(), "\n").forEach(sb::append);
+			sb.append(blank).append(addr.value).append('\n');
 		}
-		addr.children.stream().map(ac -> toString(ac, step + 1)).forEach(sb::append);
+		for (Address ac : addr.children) {
+			sb.append(toString(ac, step + 1));
+		}
 		return sb.toString();
 	}
 
 	private List<List<Address>> breakTree() {
-		List<List<Address>> res = new ArrayList<>();
+		List<List<Address>> res = new ArrayList<List<Address>>();
 		if (this.children.size() == 0) {
-			List<Address> l = new ArrayList<>();
+			List<Address> l = new ArrayList<Address>();
 			if (this.value != null)
 				l.add(this);
 			res.add(l);
 		} else {
-			res = this.children.stream().flatMap(c -> c.breakTree().stream()).map(l -> {
+			for (Address c : this.children) {
+				List<Address> l = new ArrayList<Address>();
+				for (List<Address> fl : c.breakTree())
+					l.addAll(fl);
 				if (this.value != null)
 					l.add(0, this);
-				return l;
-			}).collect(Collectors.toList());
+				res.add(l);
+			}
 		}
 		return res;
 	}
@@ -125,7 +130,7 @@ public class Address {
 	public Object[] getCutRes() {
 		Object[] res1 = new Object[4];
 		Object[] res2 = new Object[4];
-		this.breakTree().forEach(l -> {
+		for (List<Address> l : this.breakTree()) {
 			Object[] sc = calScope(l);
 			Object[] res = (sc[1] != null) ? res1 : res2;
 			if (res[1] == null || ((Number) sc[0]).doubleValue() > ((Number) res[1]).doubleValue()) {
@@ -135,7 +140,7 @@ public class Address {
 				res[2] = fs[0];
 				res[3] = fs[1];
 			}
-		});
+		}
 		return res1[0] == null ? res2 : res1;
 	}
 
@@ -147,7 +152,7 @@ public class Address {
 		CityToken ct = DataCache.idMap.get(addr.value.getId()).get(0);
 		String lastRealAddr = addr.addrReal;
 		String lastStandardAddr = ct.getName();
-		List<CityToken> ctList = new ArrayList<>();
+		List<CityToken> ctList = new ArrayList<CityToken>();
 		while (ct != null) {
 			ctList.add(0, ct);
 			ct = ct.parent;
@@ -170,14 +175,14 @@ public class Address {
 	}
 
 	public void printBreakTree() {
-		this.breakTree().forEach(l -> {
+		for (List<Address> l : this.breakTree()) {
 			Object[] sc = calScope(l);
 			System.out.print((sc[1] == null ? "_" : sc[1]) + ":" + sc[0] + ":");
-			l.forEach(a -> {
+			for (Address a : l) {
 				System.out.print(a.value);
-			});
+			}
 			System.out.println();
-		});
+		}
 	}
 
 	/**
@@ -190,9 +195,11 @@ public class Address {
 	 */
 	private Object[] calScope(List<Address> al) {
 		Object[] res = new Object[2];
-		List<Number[]> wordScopeList = new ArrayList<>();
+		List<Number[]> wordScopeList = new ArrayList<Number[]>();
 
-		int wordLen = al.stream().map(a -> {
+		int wordLen = 0;
+
+		for (Address a : al) {
 			Address addrPre = a.parent;
 			if (a.value.getCode() != null && a.value.getCode().length() > 0) {
 				res[1] = a.value.getCode();
@@ -224,14 +231,14 @@ public class Address {
 			weigh = weigh < 0 || weigh > 13 ? 0 : weigh;
 			wordScopeList.add(new Number[] { wordCountScope, weigh });
 			wordScopeList.add(new Number[] { stepScope, weigh });
-			return a.addrReal;
-		}).mapToInt(String::length).sum();
+			wordLen += a.addrReal.length();
+		}
 
-		Number[] wsNs = wordScopeList.stream().reduce(new Number[] { 0, 0 }, (ns, ns2) -> {
-			ns[0] = ns[0].doubleValue() + ns2[0].doubleValue() * ns2[1].intValue();
-			ns[1] = ns[1].intValue() + ns2[1].intValue();
-			return ns;
-		});
+		Number[] wsNs = new Number[] { 0, 0 };
+		for (Number[] ns : wordScopeList) {
+			wsNs[0] = wsNs[0].doubleValue() + ns[0].doubleValue() * ns[1].intValue();
+			wsNs[1] = wsNs[1].intValue() + ns[1].intValue();
+		}
 
 		int div = wsNs[1].intValue();
 		double wordScope = wsNs[0].doubleValue() / (div == 0 ? 1 : div);

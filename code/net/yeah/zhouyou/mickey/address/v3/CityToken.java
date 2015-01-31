@@ -9,18 +9,16 @@ public class CityToken implements Serializable {
 	private String name;
 	private long parentId;
 	private int level;
+	private String code;
 	CityToken parent;
 
-	public CityToken getParent() {
-		return parent;
-	}
-
-	public CityToken(Long id, Long parentId, int level, String name) {
+	public CityToken(Long id, Long parentId, int level, String name, String code) {
 		super();
 		this.id = id;
 		this.name = name;
 		this.parentId = parentId;
 		this.level = level;
+		this.code = code;
 	}
 
 	public Long getId() {
@@ -39,10 +37,15 @@ public class CityToken implements Serializable {
 		return level;
 	}
 
+	public String getCode() {
+		return code;
+	}
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
+		result = prime * result + ((code == null) ? 0 : code.hashCode());
 		result = prime * result + (int) (id ^ (id >>> 32));
 		result = prime * result + level;
 		result = prime * result + ((name == null) ? 0 : name.hashCode());
@@ -60,6 +63,11 @@ public class CityToken implements Serializable {
 		if (getClass() != obj.getClass())
 			return false;
 		CityToken other = (CityToken) obj;
+		if (code == null) {
+			if (other.code != null)
+				return false;
+		} else if (!code.equals(other.code))
+			return false;
 		if (id != other.id)
 			return false;
 		if (level != other.level)
@@ -81,6 +89,8 @@ public class CityToken implements Serializable {
 
 	@Override
 	public String toString() {
-		return "CityToken [id=" + id + ", name=" + name + ", parentId=" + parentId + ", level=" + level + "]";
+		return "[id=" + id + ", name=" + name + ", parentId=" + parentId + ", level=" + level
+				+ (code == null || code.length() == 0 ? "" : ", code=" + code) + "]";
 	}
+
 }
