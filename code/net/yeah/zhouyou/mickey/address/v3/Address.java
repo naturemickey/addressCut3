@@ -108,11 +108,9 @@ public class Address {
 		} else {
 			for (Address c : this.children) {
 				for (List<Address> fl : c.breakTree()){
-					List<Address> l = new ArrayList<Address>();
-					l.addAll(fl);
 					if (this.value != null)
-						l.add(0, this);
-					res.add(l);
+						fl.add(0, this);
+					res.add(fl);
 				}
 			}
 		}
