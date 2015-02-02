@@ -1,8 +1,11 @@
 package net.yeah.zhouyou.mickey.address.v3;
 
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 public class DataCache {
 
@@ -29,11 +32,19 @@ public class DataCache {
 				if (name == null || name.length() == 0 || "null".equals(name))
 					continue;
 
-				CityToken ct = new CityToken(id, parentId, Integer.valueOf(level), name, null);
+				CityToken ct = new CityToken(id, parentId, Integer.valueOf(level), name);
 
 				CollUtils.setMapValue(nm, name, ct);
 				CollUtils.setMapValue(im, ct.getId(), ct);
 			}
+		}
+		for (Entry<Long, List<CityToken>> e : im.entrySet()) {
+			Collections.sort(e.getValue(), new Comparator<CityToken>() {
+				@Override
+				public int compare(CityToken o1, CityToken o2) {
+					return o2.getName().length() - o1.getName().length();
+				}
+			});
 		}
 		for (List<CityToken> ctl : nm.values()) {
 			for (CityToken ct : ctl) {

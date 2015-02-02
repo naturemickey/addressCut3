@@ -107,12 +107,13 @@ public class Address {
 			res.add(l);
 		} else {
 			for (Address c : this.children) {
-				List<Address> l = new ArrayList<Address>();
-				for (List<Address> fl : c.breakTree())
+				for (List<Address> fl : c.breakTree()){
+					List<Address> l = new ArrayList<Address>();
 					l.addAll(fl);
-				if (this.value != null)
-					l.add(0, this);
-				res.add(l);
+					if (this.value != null)
+						l.add(0, this);
+					res.add(l);
+				}
 			}
 		}
 		return res;
@@ -121,27 +122,23 @@ public class Address {
 	/**
 	 * <pre>
 	 * @return
-	 * [0]: 网点
-	 * [1]: scope
-	 * [2]: 标准地址
-	 * [3]: 标准地址之后的未识别部分
+	 * [0]: scope
+	 * [1]: 标准地址
+	 * [2]: 标准地址之后的未识别部分
 	 * </pre>
 	 */
 	public Object[] getCutRes() {
-		Object[] res1 = new Object[4];
-		Object[] res2 = new Object[4];
+		Object[] res = new Object[4];
 		for (List<Address> l : this.breakTree()) {
-			Object[] sc = calScope(l);
-			Object[] res = (sc[1] != null) ? res1 : res2;
-			if (res[1] == null || ((Number) sc[0]).doubleValue() > ((Number) res[1]).doubleValue()) {
+			double sc = calScope(l);
+			if (res[0] == null || sc > ((Number) res[0]).doubleValue()) {
 				Object[] fs = fixToToken(l);
-				res[0] = sc[1];
-				res[1] = sc[0];
-				res[2] = fs[0];
-				res[3] = fs[1];
+				res[0] = sc;
+				res[1] = fs[0];
+				res[2] = fs[1];
 			}
 		}
-		return res1[0] == null ? res2 : res1;
+		return res;
 	}
 
 	private Object[] fixToToken(List<Address> addrList) {
@@ -176,8 +173,8 @@ public class Address {
 
 	public void printBreakTree() {
 		for (List<Address> l : this.breakTree()) {
-			Object[] sc = calScope(l);
-			System.out.print((sc[1] == null ? "_" : sc[1]) + ":" + sc[0] + ":");
+			double sc = calScope(l);
+			System.out.print(sc);
 			for (Address a : l) {
 				System.out.print(a.value);
 			}
@@ -193,17 +190,12 @@ public class Address {
 	 * [1] 为识别到的网点
 	 * </pre>
 	 */
-	private Object[] calScope(List<Address> al) {
-		Object[] res = new Object[2];
+	private double calScope(List<Address> al) {
 		List<Number[]> wordScopeList = new ArrayList<Number[]>();
-
 		int wordLen = 0;
 
 		for (Address a : al) {
 			Address addrPre = a.parent;
-			if (a.value.getCode() != null && a.value.getCode().length() > 0) {
-				res[1] = a.value.getCode();
-			}
 			double wordCountScope;
 			if (a.addrReal.equals(a.value.getName()))
 				wordCountScope = 1D;
@@ -250,7 +242,6 @@ public class Address {
 
 		double addrCountScope = (addrCount > 5) ? 0.25 : (0.1 * (6 - addrCount) + 0.25);
 
-		res[0] = wordScope * (1 - addrCountScope) + rScope * addrCountScope;
-		return res;
+		return wordScope * (1 - addrCountScope) + rScope * addrCountScope;
 	}
 }
