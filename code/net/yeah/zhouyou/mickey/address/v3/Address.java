@@ -2,7 +2,9 @@ package net.yeah.zhouyou.mickey.address.v3;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class Address {
 
@@ -34,6 +36,7 @@ public class Address {
 
 	private void add(String addrStr) {
 		for (CityToken ct : DataCache.nameMap.get(addrStr)) {
+			ct = DataCache.idMap.get(ct.getId()).get(0);
 			this.add(ct, addrStr);
 		}
 	}
@@ -192,26 +195,38 @@ public class Address {
 	 */
 	private double calScope(List<Address> al) {
 		double s = 0;
+		Set<String> set = new HashSet<String>();
 		for (Address a : al) {
-			switch (a.value.getLevel()) {
+			if (set.contains(a.addrReal))
+				continue;
+			else
+				set.add(a.addrReal);
+			CityToken ct = a.value;
+			int x = 0;
+			switch (ct.getLevel()) {
 			case 1:
-				s +=1;
+				x= a.addrReal.equals(ct.getName()) ? 10 : 9;
 				break;
 			case 2:
-				s +=0.95;
+				x = a.addrReal.equals(ct.getName()) ? 9 : 8;
 				break;
 			case 3:
-				s +=0.7;
+				x = a.addrReal.equals(ct.getName()) ? 8 : 7;
 				break;
 			case 4:
-				s +=0.5;
+				x = a.addrReal.equals(ct.getName()) ? 7 : 6;
 				break;
 			case 5:
-				s +=0.25;
+				x = a.addrReal.equals(ct.getName()) ? 6 : 5;
 				break;
-			default:
-				continue;
+			case 6:
+				x = a.addrReal.equals(ct.getName()) ? 5 : 4;
+				break;
 			}
+			s+= x;
+			int idx = this.addrList.indexOf(a.addrReal);
+			if(idx > x) idx = x;
+			s -= idx;
 		}
 		return s;
 	}
