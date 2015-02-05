@@ -47,6 +47,12 @@ public class DataCache {
 			});
 		}
 		for (List<CityToken> ctl : nm.values()) {
+			Collections.sort(ctl, new Comparator<CityToken>() {
+				@Override
+				public int compare(CityToken o1, CityToken o2) {
+					return o1.getLevel() - o2.getLevel();
+				}
+			});
 			for (CityToken ct : ctl) {
 				if (ct.getParentId() != null) {
 					List<CityToken> pctl = im.get(ct.getParentId());

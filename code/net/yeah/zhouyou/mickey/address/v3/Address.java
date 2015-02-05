@@ -64,8 +64,10 @@ public class Address {
 	}
 
 	private Integer getRelationship(CityToken ct1, CityToken ct2) {
-		if (ct1.getLevel() == ct2.getLevel()) {
-			return 0;// 同一级别不可能是上下级关系。
+		if (ct1.getLevel() == ct2.getLevel() || ct1.getName().equals(ct2.getName())) {
+			// 1.同一级别不可能是上下级关系。
+			// 2.同一名称则以高级的为准，不再识别上下级关系。
+			return 0;
 		}
 		if (ct1.getLevel() > ct2.getLevel()) {
 			return -1 * getRelationship(ct2, ct1);
@@ -107,7 +109,7 @@ public class Address {
 			res.add(l);
 		} else {
 			for (Address c : this.children) {
-				for (List<Address> fl : c.breakTree()){
+				for (List<Address> fl : c.breakTree()) {
 					if (this.value != null)
 						fl.add(0, this);
 					res.add(fl);
@@ -189,57 +191,88 @@ public class Address {
 	 * </pre>
 	 */
 	private double calScope(List<Address> al) {
-		List<Number[]> wordScopeList = new ArrayList<Number[]>();
-		int wordLen = 0;
-
+		double s = 0;
 		for (Address a : al) {
-			Address addrPre = a.parent;
-			double wordCountScope;
-			if (a.addrReal.equals(a.value.getName()))
-				wordCountScope = 1D;
-			else {
-				int len = a.addrReal.length();
-				wordCountScope = 0.8 / 6 * len + 0.2;
-				wordCountScope = wordCountScope > 1 ? 1 : wordCountScope;
+			switch (a.value.getLevel()) {
+			case 1:
+				s +=1;
+				break;
+			case 2:
+				s +=0.95;
+				break;
+			case 3:
+				s +=0.7;
+				break;
+			case 4:
+				s +=0.5;
+				break;
+			case 5:
+				s +=0.25;
+				break;
+			default:
+				continue;
 			}
-			double stepScope = 1;
-			if (addrPre != null && addrPre.value != null) {
-				int step = -1;
-				CityToken ct = a.value;
-				while (ct != null && !ct.getId().equals(addrPre.value.getId())) {
-					step += 1;
-					ct = ct.parent;
+		}
+		return s;
+	}
+
+	@SuppressWarnings("unchecked")
+	public Info info() {
+		Info res = new Info();
+		Object[] cr = this.getCutRes();
+		List<CityToken> ctList = (List<CityToken>) cr[1];
+		res.detailAddress = (String) cr[2];
+		if (ctList != null)
+			for (CityToken ct : ctList) {
+				switch (ct.getLevel()) {
+				case 1:
+					res.provinceAddress = ct.getName();
+					break;
+				case 2:
+					res.cityAddress = ct.getName();
+					break;
+				case 3:
+					res.areaAddress = ct.getName();
+					break;
+				case 4:
+					res.townAddress = ct.getName();
+					break;
 				}
-				stepScope = (step < 0 || step > 10) ? 1 : 1D - step / 10D;
 			}
-			int level = a.value.getLevel();
-			if (level < 2)
-				level = 2;
-			else if (level > 6)
-				level = 6;
-			int weigh = 13 - level;
-			weigh = weigh < 0 || weigh > 13 ? 0 : weigh;
-			wordScopeList.add(new Number[] { wordCountScope, weigh });
-			wordScopeList.add(new Number[] { stepScope, weigh });
-			wordLen += a.addrReal.length();
+		res.originalAddress = this.originalAddress;
+		return res;
+	}
+
+	public static class Info {
+		private String provinceAddress; // 省 level 1
+		private String cityAddress; // 市 level 2
+		private String areaAddress; // 区 level 3
+		private String townAddress; // 镇/街道办 level 4
+		private String originalAddress;
+		private String detailAddress;
+
+		public String getProvinceAddress() {
+			return provinceAddress;
 		}
 
-		Number[] wsNs = new Number[] { 0, 0 };
-		for (Number[] ns : wordScopeList) {
-			wsNs[0] = wsNs[0].doubleValue() + ns[0].doubleValue() * ns[1].intValue();
-			wsNs[1] = wsNs[1].intValue() + ns[1].intValue();
+		public String getCityAddress() {
+			return cityAddress;
 		}
 
-		int div = wsNs[1].intValue();
-		double wordScope = wsNs[0].doubleValue() / (div == 0 ? 1 : div);
+		public String getAreaAddress() {
+			return areaAddress;
+		}
 
-		double r = ((double) wordLen) / this.originalAddress.length();
-		double rScope = Math.sin(r * Math.PI / 2);
+		public String getTownAddress() {
+			return townAddress;
+		}
 
-		int addrCount = al.size();
+		public String getOriginalAddress() {
+			return originalAddress;
+		}
 
-		double addrCountScope = (addrCount > 5) ? 0.25 : (0.1 * (6 - addrCount) + 0.25);
-
-		return wordScope * (1 - addrCountScope) + rScope * addrCountScope;
+		public String getDetailAddress() {
+			return detailAddress;
+		}
 	}
 }
