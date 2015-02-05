@@ -196,36 +196,44 @@ public class Address {
 	private double calScope(List<Address> al) {
 		double s = 0;
 		Set<String> set = new HashSet<String>();
-		for (Address a : al) {
+		Address p = null;
+		for (int i = 0, len = al.size(); i < len; ++i) {
+			Address a = al.get(i);
+
 			if (set.contains(a.addrReal))
 				continue;
 			else
 				set.add(a.addrReal);
+
 			CityToken ct = a.value;
-			int x = 0;
+
+			if (p == null)
+				p = a;
+			else if (ct.getLevel() - p.value.getLevel() > 2) // 间隔超过两级的认为过于不准。
+				return 0;
+
+			double x = 0;
 			switch (ct.getLevel()) {
 			case 1:
-				x= a.addrReal.equals(ct.getName()) ? 10 : 9;
-				break;
 			case 2:
-				x = a.addrReal.equals(ct.getName()) ? 9 : 8;
+				x = a.addrReal.equals(ct.getName()) ? 10 : 8;
 				break;
 			case 3:
-				x = a.addrReal.equals(ct.getName()) ? 8 : 7;
+				x = a.addrReal.equals(ct.getName()) ? 6 : 4.5;
 				break;
 			case 4:
-				x = a.addrReal.equals(ct.getName()) ? 7 : 6;
+				x = a.addrReal.equals(ct.getName()) ? 3 : 2;
 				break;
 			case 5:
-				x = a.addrReal.equals(ct.getName()) ? 6 : 5;
+				x = a.addrReal.equals(ct.getName()) ? 1.5 : 1;
 				break;
-			case 6:
-				x = a.addrReal.equals(ct.getName()) ? 5 : 4;
-				break;
+			default:
+				continue;
 			}
-			s+= x;
-			int idx = this.addrList.indexOf(a.addrReal);
-			if(idx > x) idx = x;
+			s += x;
+			double idx = this.addrList.indexOf(a.addrReal) * 2;
+			if (idx > x)
+				idx = x;
 			s -= idx;
 		}
 		return s;
