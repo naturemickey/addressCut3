@@ -206,7 +206,6 @@ public class Address {
 	private double calScope(List<Address> al) {
 		double s = 0;
 		Set<String> set = new HashSet<String>();
-		Address p = null;
 		for (int i = 0, len = al.size(); i < len; ++i) {
 			Address a = al.get(i);
 
@@ -216,35 +215,12 @@ public class Address {
 				set.add(a.addrReal);
 
 			CityToken ct = a.value;
+			double idxRateScope = this.addrList.indexOf(a.addrReal);
+			double nameRate = (a.addrReal.equals(ct.getName()) ? 1D : a.addrReal.length() > 3 ? 0.9 : a.addrReal
+					.length() == 3 ? 0.8 : 0.7);
+			double levelRate = (ct.getLevel() <= 2 ? 30 : ct.getLevel() <= 4 ? 20 : 0);
 
-			if (p == null)
-				p = a;
-			else if (ct.getLevel() - p.value.getLevel() > 2) // 间隔超过两级的认为过于不准。
-				return 0;
-
-			double x = 0;
-			switch (ct.getLevel()) {
-			case 1:
-			case 2:
-				x = a.addrReal.equals(ct.getName()) ? 10 : 8;
-				break;
-			case 3:
-				x = a.addrReal.equals(ct.getName()) ? 6 : 4.5;
-				break;
-			case 4:
-				x = a.addrReal.equals(ct.getName()) ? 3 : 2;
-				break;
-			case 5:
-				x = a.addrReal.equals(ct.getName()) ? 1.5 : 1;
-				break;
-			default:
-				continue;
-			}
-			s += x;
-			double idx = this.addrList.indexOf(a.addrReal) * 2;
-			if (idx > x)
-				idx = x;
-			s -= idx;
+			s += ((levelRate - idxRateScope) / 100D * nameRate);
 		}
 		return s;
 	}
