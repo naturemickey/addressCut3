@@ -3,6 +3,7 @@ package net.yeah.zhouyou.mickey.address.v3;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -104,6 +105,17 @@ public class Address {
 	}
 
 	private List<List<Address>> breakTree() {
+		Iterator<Address> it = this.children.iterator();
+		while (it.hasNext()) {
+			Address a = it.next();
+			// 第一个节点就是4级以下的去掉。
+			if (a.value == null || a.value.getLevel() >= 4)
+				it.remove();
+		}
+		return breakTreeRecu();
+	}
+
+	private List<List<Address>> breakTreeRecu() {
 		List<List<Address>> res = new ArrayList<List<Address>>();
 		if (this.children.size() == 0) {
 			List<Address> l = new ArrayList<Address>();
@@ -188,9 +200,7 @@ public class Address {
 	/**
 	 * <pre>
 	 * @param al
-	 * @return
-	 * [0] 为scope值
-	 * [1] 为识别到的网点
+	 * @return scope值
 	 * </pre>
 	 */
 	private double calScope(List<Address> al) {
