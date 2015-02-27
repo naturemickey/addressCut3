@@ -18,13 +18,11 @@ public class Address {
 	private CityToken value;
 	private String addrReal;
 	private List<String> addrList;
-	private Address parent;
 	private List<Address> children = new ArrayList<Address>();
 
-	private Address(CityToken ct, String addrStr, Address parent) {
+	private Address(CityToken ct, String addrStr) {
 		this.value = ct;
 		this.addrReal = addrStr;
-		this.parent = parent;
 	}
 
 	public Address(String originalAddress, List<String> addrList) {
@@ -51,9 +49,8 @@ public class Address {
 				if (relationship != null && relationship != 0) {
 					hasRelationship = true;
 					if (relationship > 0) {
-						Address addrNew = new Address(ct, addrStr, this);
+						Address addrNew = new Address(ct, addrStr);
 						children.set(i, addrNew);
-						addr.parent = addrNew;
 						addrNew.children.add(addr);
 					} else {
 						addr.add(ct, addrStr);
@@ -63,7 +60,7 @@ public class Address {
 			}
 		}
 		if (!hasRelationship) {
-			children.add(new Address(ct, addrStr, this));
+			children.add(new Address(ct, addrStr));
 		}
 	}
 
