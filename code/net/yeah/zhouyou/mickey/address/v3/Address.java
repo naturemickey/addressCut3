@@ -19,10 +19,12 @@ public class Address {
 	private String addrReal;
 	private List<String> addrList;
 	private List<Address> children = new ArrayList<Address>();
+	private Address parent;
 
-	private Address(CityToken ct, String addrStr) {
+	private Address(CityToken ct, String addrStr, Address parent) {
 		this.value = ct;
 		this.addrReal = addrStr;
+		this.parent = parent;
 	}
 
 	public Address(String originalAddress, List<String> addrList) {
@@ -44,12 +46,19 @@ public class Address {
 		boolean hasRelationship = false;
 		for (int i = 0, len = children.size(); i < len; ++i) {
 			Address addr = children.get(i);
-			if (!ct.getId().equals(addr.value.getId())) {
-				Integer relationship = getRelationship(ct, addr.value);
-				if (relationship != null && relationship != 0) {
+			if (ct.getId().equals(addr.value.getId())) {
+				hasRelationship = true;
+				if (addrStr.equals(ct.getName())) {
+					addr.value = ct;
+					addr.addrReal = addrStr;
+				}
+				break;
+			} else {
+				int relationship = getRelationship(ct, addr.value);
+				if (relationship != 0) {
 					hasRelationship = true;
 					if (relationship > 0) {
-						Address addrNew = new Address(ct, addrStr);
+						Address addrNew = new Address(ct, addrStr, this);
 						children.set(i, addrNew);
 						addrNew.children.add(addr);
 					} else {
@@ -60,14 +69,14 @@ public class Address {
 			}
 		}
 		if (!hasRelationship) {
-			children.add(new Address(ct, addrStr));
+			children.add(new Address(ct, addrStr, this));
 		}
 	}
 
-	private Integer getRelationship(CityToken ct1, CityToken ct2) {
+	private int getRelationship(CityToken ct1, CityToken ct2) {
 		if (ct1.getLevel() == ct2.getLevel() || ct1.getName().equals(ct2.getName())) {
 			// 1.同一级别不可能是上下级关系。
-			// 2.同一名称则以高级的为准，不再识别上下级关系。
+			// 2.名字相同的以级别高的为准。
 			return 0;
 		}
 		if (ct1.getLevel() > ct2.getLevel()) {
@@ -83,7 +92,8 @@ public class Address {
 
 	@Override
 	public String toString() {
-		return this.originalAddress + '\n' + this.addrList.toString() + '\n' + toString(this, -1);
+		return this.originalAddress + '\n' + (this.addrList == null ? "[]" : this.addrList.toString()) + '\n'
+				+ toString(this, -1);
 	}
 
 	private static String toString(Address addr, int step) {
@@ -93,7 +103,7 @@ public class Address {
 			for (int i = 0; i < step; ++i) {
 				blank.append("    ");
 			}
-			sb.append(blank).append(addr.value).append('\n');
+			sb.append(blank).append(addr.addrReal).append(addr.value).append('\n');
 		}
 		for (Address ac : addr.children) {
 			sb.append(toString(ac, step + 1));
@@ -109,7 +119,18 @@ public class Address {
 			if (a.value == null || a.value.getLevel() >= 4)
 				it.remove();
 		}
-		return breakTreeRecu();
+		List<List<Address>> res = breakTreeRecu();
+		Iterator<List<Address>> resIt = res.iterator();
+		while (resIt.hasNext()) {
+			Set<String> ns = new HashSet<String>();
+			it = resIt.next().iterator();
+			while (it.hasNext()) {
+				String ar = it.next().addrReal;
+				if (!ns.add(ar))
+					it.remove();
+			}
+		}
+		return res;
 	}
 
 	private List<List<Address>> breakTreeRecu() {
@@ -121,7 +142,7 @@ public class Address {
 			res.add(l);
 		} else {
 			for (Address c : this.children) {
-				for (List<Address> fl : c.breakTree()) {
+				for (List<Address> fl : c.breakTreeRecu()) {
 					if (this.value != null)
 						fl.add(0, this);
 					res.add(fl);
@@ -141,13 +162,83 @@ public class Address {
 	 */
 	public Object[] getCutRes() {
 		Object[] res = new Object[4];
-		for (List<Address> l : this.breakTree()) {
-			double sc = calScope(l);
-			if (res[0] == null || sc > ((Number) res[0]).doubleValue()) {
-				Object[] fs = fixToToken(l);
-				res[0] = sc;
-				res[1] = fs[0];
-				res[2] = fs[1];
+		Object[] fs = fixToToken(choose(this.breakTree(), 0));
+		res[1] = fs[0];
+		res[2] = fs[1];
+		return res;
+	}
+
+	private List<Address> choose(List<List<Address>> ll, int idx) {
+		if (ll.size() == 0)
+			return Collections.emptyList();
+		if (ll.size() == 1)
+			return ll.get(0);
+		List<List<Address>> res1 = new ArrayList<List<Address>>();
+		int level = Integer.MAX_VALUE;
+		for (List<Address> l : ll) {
+			if (l.size() > idx) {
+				Address a = l.get(idx);
+				if (a.value != null) {
+					if (a.value.getLevel() < level) {
+						res1.clear();
+						level = a.value.getLevel();
+						res1.add(l);
+					} else if (a.value.getLevel() == level) {
+						res1.add(l);
+					}
+				}
+			}
+		}
+
+		// 测试时使用
+		// if (level == Integer.MAX_VALUE)
+		// throw new RuntimeException();
+
+		if (res1.size() == 1)
+			return res1.get(0);
+
+		boolean isStd = false;
+		boolean toRecu = false;
+		List<List<Address>> res2 = new ArrayList<List<Address>>();
+		for (List<Address> l : res1) {
+			Address a = l.get(idx);
+			if (a.value.getLevel() < 2) {
+				res2 = res1;
+				for (List<Address> l2 : res1) {
+					toRecu = toRecu || l2.size() > idx + 1;
+				}
+				break;
+			}
+			if (isStd) {
+				if (a.value.getName().length() == a.addrReal.length()) {
+					res2.add(l);
+					toRecu = toRecu || l.size() > idx + 1;
+				}
+			} else {
+				if (a.value.getName().length() == a.addrReal.length()) {
+					res2.clear();
+					toRecu = false;
+					isStd = true;
+				}
+				res2.add(l);
+				toRecu = toRecu || l.size() > idx + 1;
+			}
+		}
+		if (toRecu)
+			return choose(res2, idx + 1);
+		if (res2.size() == 0)
+			return Collections.emptyList();
+		if (res2.size() == 1)
+			return res2.get(0);
+		List<Address> res = null;
+		for (List<Address> l : res2) {
+			if (res == null)
+				res = l;
+			else {
+				Address a1 = res.get(idx);
+				Address a2 = l.get(idx);
+				if (this.addrList.indexOf(a2.addrReal) < this.addrList.indexOf(a1.addrReal))
+					res = l;
 			}
 		}
 		return res;
@@ -185,8 +276,8 @@ public class Address {
 
 	public void printBreakTree() {
 		for (List<Address> l : this.breakTree()) {
-			double sc = calScope(l);
-			System.out.print(sc);
+			// double sc = calScope(l);
+			// System.out.print(sc);
 			for (Address a : l) {
 				System.out.print(a.value);
 			}
@@ -194,41 +285,29 @@ public class Address {
 		}
 	}
 
-	/**
-	 * <pre>
-	 * @param al
-	 * @return scope值
-	 * </pre>
-	 */
-	private double calScope(List<Address> al) {
-		double s = 0;
-		Set<String> set = new HashSet<String>();
-		for (int i = 0, len = al.size(); i < len; ++i) {
-			Address a = al.get(i);
 
-			if (set.contains(a.addrReal))
-				continue;
-			else
-				set.add(a.addrReal);
+	private static final Set<String> dCity;
+	private static final Set<String> hmtCity;
 
-			CityToken ct = a.value;
-			double idxRateScope = this.addrList.indexOf(a.addrReal);
-			double nameRate = (a.addrReal.equals(ct.getName()) ? 1D : a.addrReal.length() > 3 ? 0.9 : a.addrReal
-					.length() == 3 ? 0.8 : 0.7);
-			double levelRate = (ct.getLevel() <= 2 ? 30 : ct.getLevel() <= 4 ? 20 : 0);
+	static {
+		dCity = new HashSet<String>();
+		dCity.add("北京");
+		dCity.add("上海");
+		dCity.add("天津");
+		dCity.add("重庆");
 
-			s += ((levelRate - idxRateScope) / 100D * nameRate);
-		}
-		return s;
+		hmtCity = new HashSet<String>();
+		hmtCity.add("香港");
+		hmtCity.add("澳門");
+		// hmtCity.add("臺灣");
 	}
-
 	@SuppressWarnings("unchecked")
 	public Info info() {
 		Info res = new Info();
 		Object[] cr = this.getCutRes();
 		List<CityToken> ctList = (List<CityToken>) cr[1];
 		res.detailAddress = (String) cr[2];
-		if (ctList != null)
+		if (ctList != null){
 			for (CityToken ct : ctList) {
 				switch (ct.getLevel()) {
 				case 1:
@@ -245,6 +324,14 @@ public class Address {
 					break;
 				}
 			}
+			if(ctList.size() == 0) {
+				if(dCity.contains(res.provinceAddress)){
+					res.cityAddress = res.provinceAddress + '市';
+				}else if(hmtCity.contains(res.provinceAddress)){
+					res.cityAddress = res.provinceAddress;
+				}
+			}
+		}
 		res.originalAddress = this.originalAddress;
 		return res;
 	}
