@@ -125,8 +125,11 @@ public class Address {
 			Set<String> ns = new HashSet<String>();
 			it = resIt.next().iterator();
 			while (it.hasNext()) {
-				String ar = it.next().addrReal;
-				if (!ns.add(ar))
+				Address a = it.next();
+				String ar = a.addrReal;
+				if ((a.parent != null && a.parent.value != null && a.value.getLevel() >= 4
+						&& a.parent.value.getLevel() == 1 && !dCity.contains(a.parent.value.getName()))
+						|| !ns.add(ar))
 					it.remove();
 			}
 		}
@@ -285,7 +288,6 @@ public class Address {
 		}
 	}
 
-
 	private static final Set<String> dCity;
 	private static final Set<String> hmtCity;
 
@@ -301,13 +303,14 @@ public class Address {
 		hmtCity.add("澳門");
 		// hmtCity.add("臺灣");
 	}
+
 	@SuppressWarnings("unchecked")
 	public Info info() {
 		Info res = new Info();
 		Object[] cr = this.getCutRes();
 		List<CityToken> ctList = (List<CityToken>) cr[1];
 		res.detailAddress = (String) cr[2];
-		if (ctList != null){
+		if (ctList != null) {
 			for (CityToken ct : ctList) {
 				switch (ct.getLevel()) {
 				case 1:
@@ -324,10 +327,10 @@ public class Address {
 					break;
 				}
 			}
-			if(ctList.size() == 0) {
-				if(dCity.contains(res.provinceAddress)){
+			if (ctList.size() == 1) {
+				if (dCity.contains(res.provinceAddress)) {
 					res.cityAddress = res.provinceAddress + '市';
-				}else if(hmtCity.contains(res.provinceAddress)){
+				} else if (hmtCity.contains(res.provinceAddress)) {
 					res.cityAddress = res.provinceAddress;
 				}
 			}
@@ -367,5 +370,13 @@ public class Address {
 		public String getDetailAddress() {
 			return detailAddress;
 		}
+
+		@Override
+		public String toString() {
+			return "Info [provinceAddress=" + provinceAddress + ", cityAddress=" + cityAddress + ", areaAddress="
+					+ areaAddress + ", townAddress=" + townAddress + ", originalAddress=" + originalAddress
+					+ ", detailAddress=" + detailAddress + "]";
+		}
+
 	}
 }
