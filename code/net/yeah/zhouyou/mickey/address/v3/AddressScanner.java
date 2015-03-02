@@ -15,8 +15,8 @@ public class AddressScanner {
 
 		List<String> addrList = dfa.scan(txt);
 
-		if (addrList.size() > 6)
-			addrList = addrList.subList(0, 6);
+//		if (addrList.size() > 6)
+//			addrList = addrList.subList(0, 6);
 
 		return new Address(txt, addrList);
 	}
