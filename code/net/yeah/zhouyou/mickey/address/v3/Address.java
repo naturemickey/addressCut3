@@ -182,11 +182,11 @@ public class Address {
 			if (l.size() > idx) {
 				Address a = l.get(idx);
 				if (a.value != null) {
-					if (a.value.getLevel() < level) {
+					if (level >= 3 && a.value.getLevel() < level) {
 						res1.clear();
 						level = a.value.getLevel();
 						res1.add(l);
-					} else if (a.value.getLevel() == level) {
+					} else if (a.value.getLevel() == level || (level <= 2 && a.value.getLevel() <= 2)) {
 						res1.add(l);
 					}
 				}
